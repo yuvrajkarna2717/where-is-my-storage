@@ -16,6 +16,7 @@ import {
 } from '@sv/core';
 import { SCAN_ISSUE_CODES, scan, type ScanProgress, type ScanResult } from '@sv/scan-engine';
 import { NodeFileSystemProvider } from '../node-provider.ts';
+import { renderBar, renderTree } from './tree.ts';
 
 const LOCALE = 'en-US';
 const bytes = (value: number): string => formatBytes(value, { locale: LOCALE });
@@ -29,6 +30,8 @@ Usage
 
 Options
   --volumes                   List volumes on this machine and exit
+  --tree                      Print the hierarchy as an indented tree
+  --depth <n>                 Levels to expand with --tree (default 3)
   --top <n>                   Rows of top-level breakdown to show (default 10)
   --concurrency <n>           Directory listings in flight (default 8)
   --metadata-concurrency <n>  Metadata lookups per directory (default 8)
@@ -45,6 +48,8 @@ interface CommandLine {
   readonly showVolumes: boolean;
   readonly json: boolean;
   readonly live: boolean;
+  readonly tree: boolean;
+  readonly treeDepth: number;
   readonly top: number;
   readonly concurrency: number | undefined;
   readonly metadataConcurrency: number | undefined;
@@ -57,6 +62,8 @@ function parseArguments(argv: readonly string[]): CommandLine {
   let showVolumes = false;
   let json = false;
   let live = true;
+  let tree = false;
+  let treeDepth = 3;
   let top = 10;
   let concurrency: number | undefined;
   let metadataConcurrency: number | undefined;
@@ -83,6 +90,14 @@ function parseArguments(argv: readonly string[]): CommandLine {
         break;
       case '--no-live':
         live = false;
+        break;
+      case '--tree':
+        tree = true;
+        break;
+      case '--depth':
+        treeDepth = readNumber(index + 1, '--depth');
+        tree = true;
+        index += 1;
         break;
       case '--help':
       case '-h':
@@ -111,7 +126,19 @@ function parseArguments(argv: readonly string[]): CommandLine {
     }
   }
 
-  return { path, showVolumes, json, live, top, concurrency, metadataConcurrency, maxDepth, help };
+  return {
+    path,
+    showVolumes,
+    json,
+    live,
+    tree,
+    treeDepth,
+    top,
+    concurrency,
+    metadataConcurrency,
+    maxDepth,
+    help,
+  };
 }
 
 /** Shortens text from the middle, keeping both the drive and the filename visible. */
@@ -134,9 +161,10 @@ function topLevelRows(table: NodeTable, limit: number): string[] {
     const id = ids[index]!;
     // A trailing separator marks a directory, the way `ls -F` does.
     const name = table.isDirectory(id) ? table.nameOf(id) + table.separator : table.nameOf(id);
-    const share = percent(fractionOf(table.totalSizeOf(id), total));
+    const fraction = fractionOf(table.totalSizeOf(id), total);
     rows.push(
-      `  ${ellipsize(name, 44).padEnd(44)} ${bytes(table.totalSizeOf(id)).padStart(10)} ${share.padStart(7)}`,
+      `  ${ellipsize(name, 40).padEnd(40)} ${bytes(table.totalSizeOf(id)).padStart(10)} ` +
+        `${percent(fraction).padStart(7)}  ${renderBar(fraction, 16)}`,
     );
   }
   if (ids.length > shown) rows.push(`  … and ${count(ids.length - shown)} more`);
@@ -384,7 +412,18 @@ async function main(): Promise<void> {
     console.log('');
     console.log(`  ${bytes(statistics.totalSize)} total`);
     console.log('');
-    for (const line of topLevelRows(table, options.top)) console.log(line);
+
+    if (options.tree) {
+      const width = (process.stdout.columns ?? 100) - 2;
+      for (const line of renderTree(table, { maxDepth: options.treeDepth, totalWidth: width })) {
+        console.log(`  ${line}`);
+      }
+      console.log('');
+      console.log(`  bars and percentages are shares of ${table.rootPath}`);
+    } else {
+      for (const line of topLevelRows(table, options.top)) console.log(line);
+    }
+
     reportStatistics(result);
     console.log('');
     console.log(

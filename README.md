@@ -69,12 +69,30 @@ Individual gates:
 There is no window yet, but the scanner works and can be pointed at a real disk:
 
 ```bash
-pnpm scan --volumes              # list volumes with used / free / capacity
-pnpm scan C:\Users\you           # live top-level breakdown, then full statistics
-pnpm scan / --top 20             # macOS and Linux
-pnpm scan <path> --json          # machine-readable summary
+pnpm scan --volumes                    # drives, with used / free / capacity
+pnpm scan ~ --tree --depth 3           # the hierarchy, with proportional bars
+pnpm scan C:\Users\you                 # live top-level breakdown, then statistics
+pnpm scan <path> --json                # machine-readable summary
 pnpm scan <path> --help
 ```
+
+`--tree` is the product in a terminal:
+
+```
+C:\Users\devyu                                38.7 GB   100%  ██████████████████
+├─ AppData\                                     34 GB  88.1%  ███████████████▉
+│  ├─ Local\                                  33.1 GB  85.5%  ███████████████▍
+│  │  ├─ Docker\                              8.16 GB  24.7%  ████▌
+│  │  ├─ Google\                              7.06 GB  21.4%  ███▉
+│  │  ├─ Programs\                            5.52 GB  16.7%  ███
+│  │  └─ … and 36 smaller                     5.67 GB  14.7%  ██▌
+│  └─ Roaming\                                 973 MB   2.5%  ▌
+├─ Downloads\                                 3.58 GB   9.3%  █▋
+└─ … and 38 smaller                            108 MB   0.3%  ▏
+```
+
+Bars and percentages are shares of the scan root, so every row is comparable. Entries too small to
+matter are summarised rather than dropped, so the visible rows always account for everything.
 
 Press Ctrl+C mid-scan to cancel: partial results are still reported, and the totals still
 reconcile. `pnpm bench:core` measures the storage model's memory use and throughput.
