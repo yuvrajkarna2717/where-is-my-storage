@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+
+  /* Browser code: shared UI, the browser filesystem providers, the web app and
+     the Electron renderer. `types: []` keeps @types/node out, so renderer code
+     cannot accidentally type-check against Node APIs it does not have. */
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "packages/ui/src/**/*.ts",
+    "packages/ui/src/**/*.tsx",
+    "packages/ui/test/**/*.ts",
+    "packages/ui/test/**/*.tsx",
+    "packages/fs-web/src/**/*.ts",
+    "packages/fs-web/test/**/*.ts",
+    "apps/web/src/**/*.ts",
+    "apps/web/src/**/*.tsx",
+    "apps/desktop/src/renderer/**/*.ts",
+    "apps/desktop/src/renderer/**/*.tsx",
+
+    /* The IPC contract is compiled twice on purpose: once here and once in the desktop
+       program. Anything platform-specific that crept into it would fail one of the two. */
+    "apps/desktop/src/shared/**/*.ts"
+  ]
+}

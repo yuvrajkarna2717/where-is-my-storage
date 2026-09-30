@@ -1,0 +1,14 @@
+{
+  "name": "@sv/fs-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser filesystem providers: File System Access API and webkitdirectory.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@sv/core": "workspace:*",
+    "@sv/scan-engine": "workspace:*"
+  }
+}

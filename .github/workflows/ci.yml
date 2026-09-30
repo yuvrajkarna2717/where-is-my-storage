@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: CI only ever needs to read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Filesystem behaviour differs per platform, so a failure on one OS must not
+      # hide the result on the others.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Must precede setup-node so that `cache: pnpm` can find the store.
+      # Version comes from the `packageManager` field in package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check (agnostic / node / dom)
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Architectural boundaries
+        run: pnpm run boundaries
+
+      - name: Formatting
+        run: pnpm run format:check
+
+      - name: Tests
+        run: pnpm run test
+
+  desktop:
+    name: desktop self-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Boots the real application — hardened window, preload, renderer, utility process, scan
+      # host — drives a scan through the actual IPC path and exits non-zero on any failure.
+      # This is the only check that can catch wiring faults: a preload that does not load, a
+      # sandbox that blocks something needed, a utilityProcess that cannot be forked.
+      # Linux runners have no display, so Electron needs a virtual one.
+      - name: Self-test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum pnpm run desktop:selftest
+
+      - name: Self-test (Windows and macOS)
+        if: runner.os != 'Linux'
+        run: pnpm run desktop:selftest
+
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: selftest-screenshot-${{ matrix.os }}
+          path: apps/desktop/out/selftest-screenshot.png
+          if-no-files-found: warn

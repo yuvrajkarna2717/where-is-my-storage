@@ -1,0 +1,26 @@
+node_modules/
+dist/
+out/
+build/
+release/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Test scratch space and generated boundary probes (see tools/boundaries.test.ts).
+*.generated.ts
+.tmp/
+fixtures-generated/
+
+# Local scan databases must never be committed: they describe a real filesystem.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+!.env.example

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+
+  /* Code that runs in Node: filesystem providers, SQLite store, the Electron
+     main process / preload / scan host, tooling, and every test that does not
+     need a DOM. */
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": [
+    "packages/fs-node/src/**/*.ts",
+    "packages/store-sqlite/src/**/*.ts",
+    "packages/core/test/**/*.ts",
+    "packages/scan-engine/test/**/*.ts",
+    "packages/analysis/test/**/*.ts",
+    "packages/entitlements/test/**/*.ts",
+    "packages/fs-node/test/**/*.ts",
+    "packages/store-sqlite/test/**/*.ts",
+    "packages/*/bench/**/*.ts",
+    "tools/**/*.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["tools/boundary-fixtures/**"]
+}

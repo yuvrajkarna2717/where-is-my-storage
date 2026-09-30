@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+
+    /* Packages publish TypeScript source and are bundled by the consumer
+       (vite / electron-vite / vitest) or type-stripped by Node >=22.12.
+       Nothing in this repo emits JavaScript via tsc, so tsc is a pure checker. */
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+
+    /* Forbids syntax that cannot be erased by a type-stripping runtime (enums,
+       namespaces, parameter properties). Keeps `node file.ts` viable for the CLI and
+       benchmarks without a build step or a transpiler dependency. */
+    "erasableSyntaxOnly": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  }
+}

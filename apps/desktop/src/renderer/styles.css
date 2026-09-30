@@ -1,0 +1,174 @@
+/*
+ * Application shell only. Everything reusable — treemap, breadcrumbs, volume cards, progress —
+ * is styled by @sv/ui, so the browser application in Task 18 inherits the same look without a
+ * second stylesheet to keep in step.
+ *
+ * Calm, quiet, dark. The map is the only thing that should draw the eye.
+ */
+:root {
+  color-scheme: dark;
+
+  --surface: #12131a;
+  --surface-raised: #1a1c26;
+  --surface-hover: #232635;
+  --border: #2b2f3f;
+  --text: #e6e8f0;
+  --text-muted: #9aa0b4;
+  --accent: #6ea8fe;
+  --danger: #ff8080;
+
+  --radius: 8px;
+  --gap: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--surface);
+  color: var(--text);
+  font:
+    14px/1.5 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: 20px 24px 24px;
+  height: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap);
+  flex: none;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.privacy {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.panel {
+  flex: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The map takes whatever vertical space is left: it is the point of the application. */
+.panel--map {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.map-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap);
+  flex-wrap: wrap;
+}
+
+.map-header__summary {
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* min-height: 0 lets the flex child actually shrink, which is what gives ResizeObserver a real
+   size to report instead of the content's natural height. */
+.map-surface {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.map-footer {
+  flex: none;
+  font-size: 12px;
+}
+
+.muted {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  flex: none;
+}
+
+.notice--error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  padding: 7px 13px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Focus must stay clearly visible: the treemap is keyboard navigable. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

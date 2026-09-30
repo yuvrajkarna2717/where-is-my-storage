@@ -1,0 +1,4 @@
+{
+  "extends": "../../tsconfig.agnostic.json",
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

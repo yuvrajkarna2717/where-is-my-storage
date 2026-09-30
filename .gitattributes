@@ -1,0 +1,24 @@
+# Normalise line endings to LF everywhere, in the repository and in working copies.
+#
+# Prettier is configured with `endOfLine: lf`. Without this file, Git's `core.autocrlf` on Windows
+# checks files out with CRLF, and `pnpm format:check` then fails on a fresh clone on one platform
+# while passing on the others — a confusing failure that has nothing to do with the code.
+* text=auto eol=lf
+
+# Shell scripts must keep LF even on Windows, or they will not execute on Linux runners.
+*.sh text eol=lf
+
+# Binary assets: never normalise, never try to diff.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.node binary
+
+# Generated and enormous. Collapsed in diffs and in language statistics.
+pnpm-lock.yaml -diff linguist-generated=true

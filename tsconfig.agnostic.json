@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+
+  /* Platform-agnostic packages. No `types` and no DOM lib, so these packages
+     cannot reach for `node:*`, `document`, `window` or even `console` without
+     failing the build. This is what keeps the core model portable between the
+     Electron scan host, a Node CLI, a web worker and a browser main thread. */
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": [
+    "packages/core/src/**/*.ts",
+    "packages/scan-engine/src/**/*.ts",
+    "packages/analysis/src/**/*.ts",
+    "packages/entitlements/src/**/*.ts"
+  ]
+}

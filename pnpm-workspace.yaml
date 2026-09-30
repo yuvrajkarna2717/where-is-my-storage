@@ -1,0 +1,12 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# pnpm 10 blocks dependency lifecycle scripts by default. Only these are allowed
+# to run install scripts. Keep this list as short as possible and review additions:
+# an install script is arbitrary code execution at install time.
+onlyBuiltDependencies:
+  - esbuild
+  # Electron's install script downloads the platform runtime; without it there is no binary
+  # to launch. This is the one dependency whose install script is genuinely load-bearing.
+  - electron

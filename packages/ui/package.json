@@ -1,0 +1,20 @@
+{
+  "name": "@sv/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared React UI: canvas treemap, directory tree, breadcrumbs, dashboard.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "@sv/core": "workspace:*",
+    "d3-hierarchy": "3.1.2",
+    "react": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/d3-hierarchy": "3.1.7",
+    "@types/react": "19.3.0"
+  }
+}

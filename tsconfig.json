@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+
+  /* Editor/ESLint fallback project for repo-root files only. The real gates are
+     tsconfig.agnostic.json, tsconfig.node.json and tsconfig.dom.json, each of
+     which restricts `lib`/`types` per platform. Every package carries its own
+     tsconfig.json so editors resolve the correct one for a given file. */
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["*.ts", "*.js", "*.cjs", "tools/**/*.ts"],
+
+  /* Boundary fixtures exist to break the architecture rules on purpose; one of them
+     imports a package that is deliberately not installed. They are data for
+     dependency-cruiser, not part of any program. */
+  "exclude": ["tools/boundary-fixtures/**"]
+}

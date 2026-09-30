@@ -1,0 +1,13 @@
+{
+  "name": "@sv/analysis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "File-type classification, developer storage rules, largest files, duplicates.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@sv/core": "workspace:*"
+  }
+}

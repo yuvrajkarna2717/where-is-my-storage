@@ -1,0 +1,43 @@
+{
+  "name": "storage-visualizer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline-only visual map of where your storage is used. Nothing leaves your computer.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.18.2",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run boundaries && pnpm run format:check && pnpm run test",
+    "typecheck": "pnpm run typecheck:agnostic && pnpm run typecheck:node && pnpm run typecheck:desktop && pnpm run typecheck:dom",
+    "typecheck:agnostic": "tsc -p tsconfig.agnostic.json",
+    "typecheck:node": "tsc -p tsconfig.node.json",
+    "typecheck:desktop": "tsc -p tsconfig.desktop.json",
+    "typecheck:dom": "tsc -p tsconfig.dom.json",
+    "desktop:dev": "pnpm --filter storage-visualizer-desktop run dev",
+    "desktop:build": "pnpm --filter storage-visualizer-desktop run build",
+    "desktop:selftest": "pnpm --filter storage-visualizer-desktop run selftest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "boundaries": "depcruise packages apps --config .dependency-cruiser.cjs",
+    "boundaries:graph": "depcruise packages apps --config .dependency-cruiser.cjs --output-type dot",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "bench:core": "node --expose-gc packages/core/bench/node-table.bench.ts",
+    "scan": "node packages/fs-node/src/cli/scan.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.0",
+    "dependency-cruiser": "18.4.0",
+    "eslint": "10.11.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0",
+    "vitest": "5.0.2"
+  }
+}

@@ -1,0 +1,261 @@
+/*
+ * Styles for the shared UI.
+ *
+ * The tile palette lives here, as custom properties, even though it is consumed by a canvas. A
+ * canvas cannot inherit CSS, so `readCanvasTheme` pulls these values across at runtime — which
+ * means theming still happens in one place, in a stylesheet, the way the rest of the application
+ * is themed.
+ *
+ * Colours are muted on purpose. This is a tool people open when they are slightly worried about
+ * running out of space, and a wall of saturated rectangles does not help anyone think.
+ */
+:root {
+  --tile-1: #4a6fa5;
+  --tile-2: #5b8c7b;
+  --tile-3: #8a6a9d;
+  --tile-4: #a5794a;
+  --tile-5: #4a8ca5;
+  --tile-6: #7d8c5b;
+  --tile-7: #a55a6a;
+  --tile-8: #5a6aa5;
+  --tile-9: #8c7b5b;
+  --tile-10: #5b7d8c;
+  /* The aggregated tail is not a real place on disk, so it does not compete for attention. */
+  --tile-neutral: #3a3f52;
+}
+
+/* ------------------------------------------------------------------------------- treemap */
+
+.treemap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  border-radius: var(--radius, 8px);
+  overflow: hidden;
+  background: var(--surface, #12131a);
+}
+
+.treemap__canvas {
+  display: block;
+  cursor: pointer;
+}
+
+.treemap__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  color: var(--text-muted, #9aa0b4);
+}
+
+.treemap__tooltip {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(12px, 12px);
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #2b2f3f);
+  background: color-mix(in srgb, var(--surface-raised, #1a1c26) 92%, transparent);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 45%);
+  font-size: 12px;
+  z-index: 2;
+}
+
+.treemap__tooltip-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.treemap__tooltip-detail {
+  color: var(--text-muted, #9aa0b4);
+}
+
+/*
+ * The accessible mirror of the canvas. Positioned off-screen rather than `display: none`, which
+ * would remove it from the accessibility tree and defeat its only purpose. It still receives focus,
+ * so keyboard navigation works even though the visible surface is a canvas.
+ */
+.treemap__options {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  list-style: none;
+}
+
+.treemap__options:focus-visible {
+  /* Focus has to be visible somewhere, and the canvas cannot show it. An outline around the whole
+     map tells the user their arrow keys will do something. */
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  overflow: hidden;
+  outline: 2px solid var(--accent, #6ea8fe);
+  outline-offset: -2px;
+  pointer-events: none;
+  color: transparent;
+}
+
+/* --------------------------------------------------------------------------- breadcrumbs */
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.breadcrumbs li + li::before {
+  content: '›';
+  margin: 0 6px 0 4px;
+  color: var(--text-muted, #9aa0b4);
+}
+
+.breadcrumbs li {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbs__link {
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--accent, #6ea8fe);
+  font: inherit;
+  cursor: pointer;
+}
+
+.breadcrumbs__link:hover {
+  background: var(--surface-hover, #232635);
+}
+
+.breadcrumbs__current {
+  padding: 3px 6px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.breadcrumbs__collapsed {
+  padding: 3px 6px;
+  color: var(--text-muted, #9aa0b4);
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------------------- volumes */
+
+.volumes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.volume {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  border-radius: var(--radius, 8px);
+  border: 1px solid var(--border, #2b2f3f);
+  background: var(--surface, #12131a);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.volume:hover:not(:disabled) {
+  background: var(--surface-hover, #232635);
+  border-color: var(--accent, #6ea8fe);
+}
+
+.volume:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.volume__label {
+  font-weight: 600;
+}
+
+.volume__detail {
+  color: var(--text-muted, #9aa0b4);
+  font-size: 12px;
+}
+
+.volume__detail--warning {
+  color: var(--danger, #ff8080);
+}
+
+.volume__bar,
+.scan-progress__bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: #0d0e14;
+  overflow: hidden;
+}
+
+.volume__bar-fill,
+.scan-progress__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent, #6ea8fe);
+  transition: width 150ms linear;
+}
+
+/* ------------------------------------------------------------------------- scan progress */
+
+.scan-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.scan-progress__bar {
+  width: 100%;
+}
+
+.scan-progress__meta,
+.scan-progress__path {
+  color: var(--text-muted, #9aa0b4);
+  font-size: 12px;
+}
+
+.scan-progress__path {
+  align-self: stretch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Keeps the filename visible rather than the drive letter when a path is too long. */
+  direction: rtl;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .volume__bar-fill,
+  .scan-progress__bar-fill {
+    transition: none;
+  }
+}

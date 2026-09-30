@@ -1,0 +1,10 @@
+{
+  "name": "@sv/entitlements",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Licensing seam. Deliberately isolated from the scanner and storage model.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.desktop.json",
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/scan-host/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/types/**/*.d.ts",
+    "test/**/*.ts",
+    "electron.vite.config.ts"
+  ]
+}

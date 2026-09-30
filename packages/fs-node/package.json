@@ -1,0 +1,14 @@
+{
+  "name": "@sv/fs-node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Node filesystem provider: worker pool, volume enumeration, lstat.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@sv/core": "workspace:*",
+    "@sv/scan-engine": "workspace:*"
+  }
+}

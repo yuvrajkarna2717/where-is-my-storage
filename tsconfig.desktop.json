@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+
+  /* The Electron main process, preload and scan host.
+     A separate program from tsconfig.node.json so Electron's *global* type augmentation stays
+     contained. Importing `electron` anywhere in a program declares `process.parentPort` and
+     friends for every file in it; if apps/desktop shared the Node program, @sv/fs-node and
+     @sv/store-sqlite would compile as though Electron were always present, and the day one of
+     them quietly relied on that would be the day the CLI and the tests broke.
+
+     Note that `types` lists only "node": Electron is not an @types package, so its declarations
+     arrive through the module import rather than through typeRoots. */
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": [
+    "apps/desktop/src/main/**/*.ts",
+    "apps/desktop/src/preload/**/*.ts",
+    "apps/desktop/src/scan-host/**/*.ts",
+    "apps/desktop/src/shared/**/*.ts",
+    "apps/desktop/src/types/**/*.d.ts",
+    "apps/desktop/test/**/*.ts",
+    "apps/desktop/electron.vite.config.ts"
+  ]
+}

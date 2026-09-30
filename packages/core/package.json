@@ -1,0 +1,10 @@
+{
+  "name": "@sv/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Normalized storage model: columnar node table, aggregation, percentages, units.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
