@@ -28,6 +28,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bench:core": "node --expose-gc packages/core/bench/node-table.bench.ts",
+    "bench:providers": "node --expose-gc packages/fs-node/bench/provider.bench.ts",
     "scan": "node packages/fs-node/src/cli/scan.ts"
   },
   "devDependencies": {

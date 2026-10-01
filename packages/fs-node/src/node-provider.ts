@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs';
 import { lstat, readdir, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { NodeFlags, detectSeparator, isRootPath, joinPath, normalizeSeparators } from '@sv/core';
+import { detectSeparator, isRootPath, joinPath, normalizeSeparators } from '@sv/core';
 import {
   FileSystemAccessError,
   type CancellationSignal,
@@ -14,6 +14,7 @@ import {
   type VolumeInfo,
 } from '@sv/scan-engine';
 import { forEachWithLimit } from './concurrency.ts';
+import { directoryEntry, fileEntry, linkFlagsFor, unreadableEntry } from './entry-shapes.ts';
 import { errnoOf, issueCodeForError, toAccessError } from './errors.ts';
 import { toPlatformPath } from './long-paths.ts';
 import { listNodeVolumes, readCapacity } from './volumes.ts';
@@ -127,36 +128,19 @@ export class NodeFileSystemProvider implements FileSystemProvider {
 
       const dirent = dirents[index]!;
 
-      // A plain directory needs no metadata call: its kind comes from the directory listing
-      // and its size is by definition the aggregate of its contents. Skipping the lstat
-      // removes one syscall for every directory on the disk. The cost is an unknown
-      // modification time for directories, which nothing in the product reads.
+      // The shapes below come from `entry-shapes.ts`, shared with the worker pool, so the two
+      // implementations of directory reading cannot disagree about what they found.
       if (dirent.isDirectory()) {
-        slots[index] = {
-          name: dirent.name,
-          directory: true,
-          size: 0,
-          mtimeMs: Number.NaN,
-          flags: NodeFlags.None,
-        };
+        slots[index] = directoryEntry(dirent.name);
         return;
       }
 
-      // Windows junctions and symlinks both arrive here as links. Telling them apart needs
-      // the reparse tag, which Node does not expose; Task 7 addresses that. Either way the
-      // behaviour is already correct: recorded, never followed.
-      const linkFlags = dirent.isSymbolicLink() ? NodeFlags.Symlink : NodeFlags.None;
+      const linkFlags = linkFlagsFor(dirent);
       const childPath = joinPath(path, dirent.name, separator);
 
       try {
         const stats = await lstat(toPlatformPath(childPath, this.#platform));
-        slots[index] = {
-          name: dirent.name,
-          directory: false,
-          size: stats.size,
-          mtimeMs: stats.mtimeMs,
-          flags: linkFlags,
-        };
+        slots[index] = fileEntry(dirent.name, stats.size, stats.mtimeMs, linkFlags);
       } catch (error) {
         const code = issueCodeForError(error);
         const detail = errnoOf(error);
@@ -166,13 +150,7 @@ export class NodeFileSystemProvider implements FileSystemProvider {
         // Recording it with a size of zero would be inventing an entry.
         if (code === 'vanished') return;
 
-        slots[index] = {
-          name: dirent.name,
-          directory: false,
-          size: 0,
-          mtimeMs: Number.NaN,
-          flags: linkFlags | NodeFlags.AccessDenied,
-        };
+        slots[index] = unreadableEntry(dirent.name, linkFlags);
       }
     });
 

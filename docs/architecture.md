@@ -182,28 +182,95 @@ that retreats is worse than none.
 
 Cancellation is polled between listings through a minimal `{ aborted: boolean }` interface that a
 real `AbortSignal` satisfies structurally. Polling has no listener to leak and no timer to clear,
-and Task 6 can back the same interface with a `SharedArrayBuffer` flag that worker threads read
+and the same interface is backed by a `SharedArrayBuffer` flag for the worker pool, which reads it
 without any message passing.
 
 ### Baseline throughput
 
 Single-threaded `readdir` + `lstat`, measured on Windows with an NVMe SSD:
 
-| Target                | Entries | Time   | Rate              |
-| --------------------- | ------- | ------ | ----------------- |
-| `C:\Windows`          | 233,949 | 13.3 s | ~17,600 entries/s |
-| `C:\Windows\System32` | 22,555  | 1.5 s  | ~15,000 entries/s |
+| Target                | Entries  | Time   | Rate              |
+| --------------------- | -------- | ------ | ----------------- |
+| `C:\Windows` (cold)   | 233,949  | 13.3 s | ~17,600 entries/s |
+| `C:\Windows` (warm)   | ~233,900 | 2.9 s  | ~79,500 entries/s |
+| `C:\Windows\System32` | 22,555   | 1.5 s  | ~15,000 entries/s |
 
-This is the number Task 6's worker pool has to beat, and Task 9 decides from measurements
-whether a native provider is warranted. The known ceiling for portable Node on Windows is that
-`readdir` discards the size information the OS already returned, forcing one `lstat` per file;
-tools like WizTree avoid that entirely by parsing the NTFS master file table, which needs
-elevation and is Windows-only.
+The known ceiling for portable Node on Windows is that `readdir` discards the size information the
+OS already returned, forcing one `lstat` per file; tools like WizTree avoid that entirely by
+parsing the NTFS master file table, which needs elevation and is Windows-only.
 
 One optimisation is already in place: plain directories are not `lstat`-ed at all, since their
 kind comes from the directory listing and their size is by definition the aggregate of their
 contents. The cost is an unknown modification time for directories, which nothing in the product
 reads.
+
+### The worker pool is not the default, because it is not faster
+
+`WorkerFileSystemProvider` exists and works, and the single-threaded `NodeFileSystemProvider`
+remains the default. That is the opposite of what the plan expected, so the measurement is recorded
+here rather than left as folklore.
+
+The theory was sound. Node dispatches asynchronous filesystem calls to a libuv thread pool of four
+threads by default, so a "concurrent" scan is really four syscalls deep no matter how many listings
+are outstanding, and raising the engine's concurrency past that only deepens a queue. Worker threads
+each have their own execution context, so eight workers should mean eight genuinely concurrent
+syscalls.
+
+`packages/fs-node/bench/provider.bench.ts` measures it two ways against a warm `C:\Windows` (52,993
+directories, 180,966 files), five reps per cell, the whole concurrency × provider matrix interleaved
+in alternating order, with a forced collection between runs. Best-of-five, worker startup charged
+separately:
+
+| Engine concurrency | Listings only, best         | Full scan, best             |
+| ------------------ | --------------------------- | --------------------------- |
+| 8                  | workers(12) **1.17×**       | simple (workers 0.81–1.00×) |
+| 16                 | simple (workers 0.78–1.00×) | simple (workers 0.86–1.00×) |
+| 32                 | workers(12) **1.10×**       | workers(12) 1.04×           |
+| 64                 | workers(12) 1.04×           | simple (workers 0.82–0.94×) |
+
+Replaying listings with nothing else running, the pool is 10–17% faster — the theory holds for the
+part it predicted. Through the whole engine, with the tree actually being built, the lead
+disappears: 2.84 s at best against 2.94 s single-threaded, inside the 1.2–2.1× run-to-run spread,
+and with a worse median (4.46 s against 3.17 s).
+
+The reason is that the work does not leave the main thread, it changes shape. Every listing comes
+back as a structured clone, so the main thread stops calling `lstat` and starts deserialising a few
+hundred thousand objects instead — while still doing all the tree building. Two details corroborate
+this rather than leaving it a guess:
+
+- **Four workers is consistently slower than no workers** (0.73–0.97×). If threads were the
+  constraint, four would still beat one.
+- **This tree averages 3.4 files per directory**, so each listing is roughly one `readdir` plus
+  three `lstat`s. A per-message cost on that order is not a rounding error.
+
+Two measurement traps were worth more than the numbers themselves. Charging worker startup to
+throughput made the pool look 4–10× slower on small trees, when it is really a flat ~150 ms for
+eight threads. And sweeping configurations in nested loops made the single-threaded provider look
+like it degraded monotonically with concurrency — 3.7 s, 4.4 s, 8.5 s — which was not concurrency at
+all but GC pressure from scan tables accumulating over the run, charged to whichever cell happened
+to go last.
+
+What would actually help is implied by the finding: hand a listing over as one transferable
+`ArrayBuffer` of packed names and sizes instead of an array of objects, so the clone cost goes to
+zero. That needs a columnar intake path on the engine side, so it is deferred to the performance
+task rather than bolted on here. The pool stays opt-in in the meantime, for three reasons: it is the
+only standing proof that the `FileSystemProvider` seam tolerates an implementation off the caller's
+thread, which is exactly what a native provider will be; the measurement is one machine and one warm
+NTFS tree, and `--provider workers` is what lets a bug report test the other hypothesis instead of
+arguing about it; and the transferable-buffer fix reuses all of its cancellation, pooling and
+crash-recovery machinery.
+
+Two things in it are load-bearing and non-obvious:
+
+- **Cancellation travels through a `SharedArrayBuffer`, not a message.** A worker reading a
+  directory of 200,000 entries is inside a synchronous loop and will not touch its message queue
+  until it finishes, so a "stop" message arrives far too late. The shared flag is checked between
+  entries.
+- **A worker is `ref`'d only while a request is outstanding.** Idle workers must not hold the
+  process open, or the CLI appears to hang after printing its results — but an unreferenced worker
+  does not keep the event loop alive while a reply is in flight either, and since a scan is driven
+  entirely by those replies, unreferencing unconditionally makes the process exit before the first
+  one arrives. It printed nothing and exited 0.
 
 ## Visualisation
 

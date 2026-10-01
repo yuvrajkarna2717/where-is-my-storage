@@ -30,7 +30,7 @@ apps/
 packages/
   core/             Normalized storage model: columnar node table, aggregation, percentages
   scan-engine/      Platform-agnostic traversal orchestrator + FileSystemProvider seam
-  fs-node/          Node filesystem provider (worker pool, volume enumeration)
+  fs-node/          Node filesystem providers (single-threaded, worker pool), volume enumeration
   fs-web/           Browser providers (File System Access API, webkitdirectory fallback)
   store-sqlite/     Local persistence: scan snapshots, rollups, settings
   analysis/         File types, developer storage, largest files, duplicates
@@ -95,7 +95,14 @@ Bars and percentages are shares of the scan root, so every row is comparable. En
 matter are summarised rather than dropped, so the visible rows always account for everything.
 
 Press Ctrl+C mid-scan to cancel: partial results are still reported, and the totals still
-reconcile. `pnpm bench:core` measures the storage model's memory use and throughput.
+reconcile.
+
+Two benchmarks back the choices above with numbers rather than intuition:
+
+```bash
+pnpm bench:core                        # storage model: memory per node, build throughput
+pnpm bench:providers C:\Windows        # single-threaded vs worker pool, across concurrencies
+```
 
 ## Status
 
@@ -116,8 +123,15 @@ Under active construction, built in ordered phases.
 - **Task 5 — the map.** `@sv/ui` with a canvas treemap, breadcrumbs, volume picker and progress
   panel, wired into the desktop app with drill-down. **The walking skeleton is complete**: pick a
   drive, watch results appear while scanning, click into folders, navigate back.
+- **Task 6 — worker pool, and a result that went the other way.** A pool of worker threads doing
+  synchronous `readdir`/`lstat`, with cancellation through a `SharedArrayBuffer` and recovery from a
+  crashed worker. It is **not** the default, because it measured slower end to end: raw listing
+  throughput improves 10–17%, but the gain is cancelled by the structured-clone deserialisation it
+  adds to the main thread, which is still the thread building the tree. The pool stays available via
+  `--provider workers`, and 25 tests pin both providers to byte-identical results.
+  [The measurement and what would actually help](docs/architecture.md#the-worker-pool-is-not-the-default-because-it-is-not-faster).
 
-Next: moving the scanner onto a worker pool, then cross-platform hardening.
+Next: cross-platform hardening.
 
 ## Running the desktop app
 

@@ -38,7 +38,14 @@ export interface ScanSessionCallbacks {
 }
 
 export interface ScanSessionOptions {
-  /** Injectable so tests and a future native provider can substitute an implementation. */
+  /**
+   * Injectable so tests and a future native provider can substitute an implementation.
+   *
+   * The default is deliberately the single-threaded `NodeFileSystemProvider` and not
+   * `WorkerFileSystemProvider`, which exists and works but measured *slower* end to end — see
+   * docs/architecture.md. Switching this without re-running `pnpm bench:providers` would be a
+   * regression dressed as an optimisation.
+   */
   readonly createProvider?: () => FileSystemProvider;
   readonly progressIntervalMs?: number;
 }

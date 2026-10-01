@@ -14,8 +14,15 @@ import {
   fractionOf,
   type NodeTable,
 } from '@sv/core';
-import { SCAN_ISSUE_CODES, scan, type ScanProgress, type ScanResult } from '@sv/scan-engine';
+import {
+  SCAN_ISSUE_CODES,
+  scan,
+  type FileSystemProvider,
+  type ScanProgress,
+  type ScanResult,
+} from '@sv/scan-engine';
 import { NodeFileSystemProvider } from '../node-provider.ts';
+import { DEFAULT_WORKER_COUNT, WorkerFileSystemProvider } from '../worker-provider.ts';
 import { renderBar, renderTree } from './tree.ts';
 
 const LOCALE = 'en-US';
@@ -33,8 +40,10 @@ Options
   --tree                      Print the hierarchy as an indented tree
   --depth <n>                 Levels to expand with --tree (default 3)
   --top <n>                   Rows of top-level breakdown to show (default 10)
+  --provider <simple|workers> Single-threaded or worker pool (default simple)
+  --workers <n>               Worker threads to use (default ${String(DEFAULT_WORKER_COUNT)})
   --concurrency <n>           Directory listings in flight (default 8)
-  --metadata-concurrency <n>  Metadata lookups per directory (default 8)
+  --metadata-concurrency <n>  Metadata lookups per directory, --provider simple only (default 8)
   --max-depth <n>             Depth guard (default 4096)
   --json                      Emit a machine-readable summary instead of live output
   --no-live                   Plain line-by-line progress, for logs and CI
@@ -42,6 +51,18 @@ Options
 
 Press Ctrl+C during a scan to cancel; partial results are still reported.
 `;
+
+type ProviderKind = 'workers' | 'simple';
+
+/**
+ * The single-threaded provider, because it measured faster.
+ *
+ * `packages/fs-node/bench/provider.bench.ts` compared both over a warm scan of `C:\Windows`
+ * (53k directories, 181k files). Listings-only, the pool is 10-17% quicker. End to end, with the
+ * tree being built, that lead disappears: the listing work moves off the main thread but an
+ * equivalent amount of structured-clone deserialisation moves onto it. See docs/architecture.md.
+ */
+const DEFAULT_PROVIDER: ProviderKind = 'simple';
 
 interface CommandLine {
   readonly path: string | null;
@@ -51,6 +72,8 @@ interface CommandLine {
   readonly tree: boolean;
   readonly treeDepth: number;
   readonly top: number;
+  readonly provider: ProviderKind;
+  readonly workers: number | undefined;
   readonly concurrency: number | undefined;
   readonly metadataConcurrency: number | undefined;
   readonly maxDepth: number | undefined;
@@ -65,6 +88,8 @@ function parseArguments(argv: readonly string[]): CommandLine {
   let tree = false;
   let treeDepth = 3;
   let top = 10;
+  let provider: ProviderKind = DEFAULT_PROVIDER;
+  let workers: number | undefined;
   let concurrency: number | undefined;
   let metadataConcurrency: number | undefined;
   let maxDepth: number | undefined;
@@ -107,6 +132,20 @@ function parseArguments(argv: readonly string[]): CommandLine {
         top = readNumber(index + 1, '--top');
         index += 1;
         break;
+      case '--provider': {
+        const raw = argv[index + 1];
+        if (raw !== 'workers' && raw !== 'simple') {
+          throw new Error(`--provider must be "workers" or "simple", got ${raw ?? '(nothing)'}`);
+        }
+        provider = raw;
+        index += 1;
+        break;
+      }
+      case '--workers':
+        workers = readNumber(index + 1, '--workers');
+        provider = 'workers';
+        index += 1;
+        break;
       case '--concurrency':
         concurrency = readNumber(index + 1, '--concurrency');
         index += 1;
@@ -134,6 +173,8 @@ function parseArguments(argv: readonly string[]): CommandLine {
     tree,
     treeDepth,
     top,
+    provider,
+    workers,
     concurrency,
     metadataConcurrency,
     maxDepth,
@@ -251,7 +292,7 @@ class ProgressPrinter {
   }
 }
 
-async function runVolumes(provider: NodeFileSystemProvider, json: boolean): Promise<void> {
+async function runVolumes(provider: FileSystemProvider, json: boolean): Promise<void> {
   const volumes = await provider.listVolumes();
 
   if (json) {
@@ -343,20 +384,31 @@ async function main(): Promise<void> {
     return;
   }
 
-  const provider = new NodeFileSystemProvider(
-    options.metadataConcurrency === undefined
-      ? {}
-      : { metadataConcurrency: options.metadataConcurrency },
-  );
+  const provider: FileSystemProvider =
+    options.provider === 'simple'
+      ? new NodeFileSystemProvider(
+          options.metadataConcurrency === undefined
+            ? {}
+            : { metadataConcurrency: options.metadataConcurrency },
+        )
+      : new WorkerFileSystemProvider({
+          // Relative to this file, which is only ever executed by Node as an ES module — never
+          // bundled — so `import.meta.url` is meaningful here in a way it would not be inside the
+          // shared package.
+          workerEntry: new URL('../worker/entry.ts', import.meta.url),
+          ...(options.workers === undefined ? {} : { workerCount: options.workers }),
+        });
 
   if (options.showVolumes) {
     await runVolumes(provider, options.json);
+    await provider.dispose?.();
     return;
   }
 
   if (options.path === null) {
     console.log(USAGE);
     process.exitCode = 1;
+    await provider.dispose?.();
     return;
   }
 
@@ -430,9 +482,16 @@ async function main(): Promise<void> {
       `  ${count(table.count)} nodes held in ${bytes(memory.columnBytes + memory.nameBytes)} ` +
         `(${memory.bytesPerNode.toFixed(1)} bytes each)`,
     );
+
+    const entries = statistics.filesDiscovered + statistics.directoriesDiscovered;
+    const rate = statistics.durationMs > 0 ? (entries / statistics.durationMs) * 1000 : 0;
+    console.log(`  ${provider.capabilities.name} · ${count(Math.round(rate))} entries/s`);
     console.log('');
   } finally {
     process.off('SIGINT', onInterrupt);
+    // Terminates worker threads. Without it the process would linger until the workers were
+    // garbage-collected, which for a CLI reads as a hang.
+    await provider.dispose?.();
   }
 }
 
