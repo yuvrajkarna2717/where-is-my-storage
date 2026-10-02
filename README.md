@@ -106,32 +106,33 @@ pnpm bench:providers C:\Windows        # single-threaded vs worker pool, across 
 
 ## Status
 
-Under active construction, built in ordered phases.
+Under active construction, built in ordered phases. **6 of 24 tasks complete**, and the walking
+skeleton runs end to end: pick a drive, watch the treemap fill in while the scan is still running,
+click into folders, navigate back out.
 
-- **Task 1 — foundation.** Workspace, three-way type-check split, architectural boundary rules
-  with tests proving each rule fires, CI across Windows, macOS and Linux.
-- **Task 2 — storage model.** Columnar node table, incremental aggregation, four percentage
-  framings, formatting and path handling. Measured at 86 MB per million nodes against 369 MB for
-  the equivalent object tree.
-- **Task 3 — scanner.** Platform-agnostic traversal engine, the `FileSystemProvider` seam, the
-  Node provider, and the `pnpm scan` CLI. Verified against `C:\Windows`: 234k entries, 52
-  permission errors absorbed without aborting, totals flagged as a lower bound where they are one.
-- **Task 4 — desktop shell.** Hardened Electron app: sandboxed renderer with no Node access, a
-  seven-command validated IPC surface, and the scanner isolated in a `utilityProcess`. A
-  `--selftest` mode boots the real application and verifies all of it, including a screenshot.
+| Stage                             | Tasks | State                        |
+| --------------------------------- | ----- | ---------------------------- |
+| 1 — foundation, walking skeleton  | 1–5   | complete                     |
+| 2 — scanner depth and correctness | 6–9   | Task 6 complete, Task 7 next |
+| 3 — persistence and scale         | 10–13 | not started                  |
+| 4 — features                      | 14–18 | not started                  |
+| 5 — product and release           | 19–24 | not started                  |
 
-- **Task 5 — the map.** `@sv/ui` with a canvas treemap, breadcrumbs, volume picker and progress
-  panel, wired into the desktop app with drill-down. **The walking skeleton is complete**: pick a
-  drive, watch results appear while scanning, click into folders, navigate back.
-- **Task 6 — worker pool, and a result that went the other way.** A pool of worker threads doing
-  synchronous `readdir`/`lstat`, with cancellation through a `SharedArrayBuffer` and recovery from a
-  crashed worker. It is **not** the default, because it measured slower end to end: raw listing
-  throughput improves 10–17%, but the gain is cancelled by the structured-clone deserialisation it
-  adds to the main thread, which is still the thread building the tree. The pool stays available via
-  `--provider workers`, and 25 tests pin both providers to byte-identical results.
-  [The measurement and what would actually help](docs/architecture.md#the-worker-pool-is-not-the-default-because-it-is-not-faster).
+- **[progress.md](docs/progress.md)** — what is built, what was measured, and the decisions that
+  went against the plan, including the three that were reversed by measurement.
+- **[roadmap.md](docs/roadmap.md)** — what is left and in what order.
+- **[architecture.md](docs/architecture.md)** — why it is shaped this way.
 
-Next: cross-platform hardening.
+The most recent result is worth stating here because it contradicts the plan: the worker pool built
+in Task 6 is **not** the default, because it measured slower end to end. Raw listing throughput
+improves 10–17%, but the gain is cancelled by the structured-clone deserialisation it adds to the
+main thread — which is still the thread building the tree. It stays available via
+`--provider workers`, and 25 tests pin both providers to byte-identical results.
+[The measurement and what would actually help](docs/architecture.md#the-worker-pool-is-not-the-default-because-it-is-not-faster).
+
+One honest caveat: **CI has never run.** The workflow covers Windows, macOS and Linux for both the
+check and the app self-test, but there was no remote until now, so everything has only ever been
+verified on Windows.
 
 ## Running the desktop app
 
